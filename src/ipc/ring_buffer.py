@@ -5,10 +5,19 @@ import struct
 
 class RingBuffer:
     def __init__(self, capacity):
+        if (
+            not isinstance(capacity, int)
+            or isinstance(capacity, bool)
+            or capacity <= 0
+        ):
+            raise ValueError(
+                "Capacity must be a positive integer"
+            )
+
         self.order_format = struct.Struct("=IdI")
         self.capacity = capacity
 
-        # Saare slots ke liye fixed memory
+        # Fixed memory for all buffer slots
         self.memory = mmap.mmap(
             -1, capacity * self.order_format.size
         )
@@ -18,7 +27,7 @@ class RingBuffer:
         self.count = 0
 
     def write(self, order_id, price, quantity):
-        # Buffer full hai toh order reject karo
+        # Reject order if buffer is full
         if self.count == self.capacity:
             return False
 
@@ -35,7 +44,7 @@ class RingBuffer:
         return True
 
     def read(self):
-        # Buffer empty hai
+        # Return None if buffer is empty
         if self.count == 0:
             return None
 
@@ -53,7 +62,7 @@ class RingBuffer:
         self.memory.close()
 
 
-# Chhota test
+# Small manual test
 if __name__ == "__main__":
     buffer = RingBuffer(capacity=3)
 
@@ -61,16 +70,15 @@ if __name__ == "__main__":
     buffer.write(102, 251.00, 5)
     buffer.write(103, 249.75, 8)
 
-    # Buffer full hai, isliye ye order reject hoga
     print("Fourth order accepted?", buffer.write(104, 252.00, 2))
 
     print("Read:", buffer.read())
     print("Read:", buffer.read())
 
-    # Ab ek slot free hai
     print("Fourth order accepted now?", buffer.write(104, 252.00, 2))
 
     print("Read:", buffer.read())
     print("Read:", buffer.read())
 
     buffer.close()
+
