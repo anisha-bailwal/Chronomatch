@@ -55,6 +55,13 @@ class TestRingBuffer(unittest.TestCase):
             self.buffer.read(), (105, 253.00, 4)
         )
 
+    def test_invalid_capacity_is_rejected(self):
+        for capacity in (0, -1, True, 1.5):
+            with self.subTest(capacity=capacity):
+                with self.assertRaises(ValueError):
+                    RingBuffer(capacity)
+
 
 if __name__ == "__main__":
     unittest.main()
+
