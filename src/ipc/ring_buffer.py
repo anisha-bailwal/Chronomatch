@@ -1,10 +1,12 @@
 
+
 import mmap
 import struct
 
 
 class RingBuffer:
     def __init__(self, capacity):
+        # Validate buffer capacity
         if (
             not isinstance(capacity, int)
             or isinstance(capacity, bool)
@@ -39,7 +41,10 @@ class RingBuffer:
         self.memory.seek(position)
         self.memory.write(data)
 
-        self.write_pos = (self.write_pos + 1) % self.capacity
+        self.write_pos = (
+            self.write_pos + 1
+        ) % self.capacity
+
         self.count += 1
         return True
 
@@ -54,11 +59,31 @@ class RingBuffer:
 
         order = self.order_format.unpack(data)
 
-        self.read_pos = (self.read_pos + 1) % self.capacity
+        self.read_pos = (
+            self.read_pos + 1
+        ) % self.capacity
+
         self.count -= 1
         return order
 
+    def size(self):
+        """Return the number of orders currently stored."""
+        return self.count
+
+    def is_empty(self):
+        """Check whether the buffer is empty."""
+        return self.count == 0
+
+    def is_full(self):
+        """Check whether the buffer is full."""
+        return self.count == self.capacity
+
+    def available_space(self):
+        """Return the number of free slots in the buffer."""
+        return self.capacity - self.count
+
     def close(self):
+        """Release the allocated memory."""
         self.memory.close()
 
 
@@ -66,19 +91,35 @@ class RingBuffer:
 if __name__ == "__main__":
     buffer = RingBuffer(capacity=3)
 
-    buffer.write(101, 250.50, 10)
-    buffer.write(102, 251.00, 5)
-    buffer.write(103, 249.75, 8)
+    try:
+        buffer.write(101, 250.50, 10)
+        buffer.write(102, 251.00, 5)
+        buffer.write(103, 249.75, 8)
 
-    print("Fourth order accepted?", buffer.write(104, 252.00, 2))
+        print("Buffer size:", buffer.size())
+        print("Is buffer full?", buffer.is_full())
+        print("Available space:", buffer.available_space())
 
-    print("Read:", buffer.read())
-    print("Read:", buffer.read())
+        print(
+            "Fourth order accepted?",
+            buffer.write(104, 252.00, 2)
+        )
 
-    print("Fourth order accepted now?", buffer.write(104, 252.00, 2))
+        print("Read:", buffer.read())
+        print("Read:", buffer.read())
 
-    print("Read:", buffer.read())
-    print("Read:", buffer.read())
+        print(
+            "Fourth order accepted now?",
+            buffer.write(104, 252.00, 2)
+        )
 
-    buffer.close()
+        print("Buffer size:", buffer.size())
+        print("Available space:", buffer.available_space())
 
+        print("Read:", buffer.read())
+        print("Read:", buffer.read())
+
+        print("Is buffer empty?", buffer.is_empty())
+
+    finally:
+        buffer.close()

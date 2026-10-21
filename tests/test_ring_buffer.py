@@ -61,6 +61,33 @@ class TestRingBuffer(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     RingBuffer(capacity)
 
+    def test_size_of_empty_buffer(self):
+            self.assertEqual(self.buffer.size(), 0)
+
+    def test_available_space_initially(self):
+        self.assertEqual(self.buffer.available_space(), 3)
+
+    def test_is_empty_and_is_full(self):
+        self.assertTrue(self.buffer.is_empty())
+        self.assertFalse(self.buffer.is_full())
+
+        self.buffer.write(101, 250.50, 10)
+        self.buffer.write(102, 251.00, 5)
+        self.buffer.write(103, 249.75, 8)
+
+        self.assertTrue(self.buffer.is_full())
+        self.assertFalse(self.buffer.is_empty())
+
+    def test_size_and_available_space_after_write(self):
+        self.buffer.write(101, 250.50, 10)
+
+        self.assertEqual(self.buffer.size(), 1)
+        self.assertEqual(self.buffer.available_space(), 2)
+
+        self.buffer.read()
+
+        self.assertEqual(self.buffer.size(), 0)
+        self.assertEqual(self.buffer.available_space(), 3)
 
 if __name__ == "__main__":
     unittest.main()
