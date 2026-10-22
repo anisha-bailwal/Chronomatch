@@ -89,6 +89,29 @@ class TestRingBuffer(unittest.TestCase):
         self.assertEqual(self.buffer.size(), 0)
         self.assertEqual(self.buffer.available_space(), 3)
 
+    
+    def test_negative_order_id_is_rejected(self):
+        with self.assertRaises(ValueError):
+            self.buffer.write(-1, 250.50, 10)
+
+    def test_invalid_price_is_rejected(self):
+        for price in (0, -10, "invalid", True):
+            with self.subTest(price=price):
+                with self.assertRaises(ValueError):
+                    self.buffer.write(101, price, 10)
+
+    def test_invalid_quantity_is_rejected(self):
+        for quantity in (0, -2, 1.5, True):
+            with self.subTest(quantity=quantity):
+                with self.assertRaises(ValueError):
+                    self.buffer.write(101, 250.50, quantity)
+
+    def test_invalid_order_id_type_is_rejected(self):
+        for order_id in (1.5, "101", True):
+            with self.subTest(order_id=order_id):
+                with self.assertRaises(ValueError):
+                    self.buffer.write(order_id, 250.50, 10)
+
 if __name__ == "__main__":
     unittest.main()
 
