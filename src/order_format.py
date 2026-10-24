@@ -1,26 +1,56 @@
 
 import struct
 
-# Order ka format define karna
-ORDER_FORMAT = struct.Struct("IdI")
+# Order side mapping: BUY = 0, SELL = 1
+BUY = 0
+SELL = 1
 
-# Ek sample trading order
-order_id = 101
-price = 250.50
-quantity = 10
+# Order format: Order ID, Side, Price, Quantity
+ORDER_FORMAT = struct.Struct("=IBdI")
 
-# Order ko bytes mein convert karna
-order_data = ORDER_FORMAT.pack(order_id, price, quantity)
 
-print("Original order:")
-print("Order ID:", order_id)
-print("Price:", price)
-print("Quantity:", quantity)
+def encode_order(order_id, side, price, quantity):
+    """Convert an order into bytes."""
+    if side not in ("BUY", "SELL"):
+        raise ValueError("Side must be BUY or SELL")
 
-print("\nOrder ka size:", ORDER_FORMAT.size, "bytes")
-print("Stored data:", order_data)
+    side_code = BUY if side == "BUY" else SELL
 
-# Bytes ko wapas values mein convert karna
-decoded_order = ORDER_FORMAT.unpack(order_data)
+    return ORDER_FORMAT.pack(
+        order_id, side_code, price, quantity
+    )
 
-print("\nDecoded order:", decoded_order)
+
+def decode_order(order_data):
+    """Convert stored bytes back into an order."""
+    order_id, side_code, price, quantity = (
+        ORDER_FORMAT.unpack(order_data)
+    )
+
+    if side_code not in (BUY, SELL):
+        raise ValueError("Invalid order side code")
+
+    side = "BUY" if side_code == BUY else "SELL"
+
+    return order_id, side, price, quantity
+
+
+if __name__ == "__main__":
+    order_id = 101
+    side = "BUY"
+    price = 250.50
+    quantity = 10
+
+    order_data = encode_order(
+        order_id, side, price, quantity
+    )
+
+    print("Original order:")
+    print("Order ID:", order_id)
+    print("Side:", side)
+    print("Price:", price)
+    print("Quantity:", quantity)
+
+    print("\nOrder size:", ORDER_FORMAT.size, "bytes")
+    print("Stored data:", order_data)
+    print("Decoded order:", decode_order(order_data))

@@ -1,4 +1,3 @@
-
 import unittest
 from src.ipc.ring_buffer import RingBuffer
 
@@ -14,45 +13,56 @@ class TestRingBuffer(unittest.TestCase):
     def test_read_empty_buffer(self):
         self.assertIsNone(self.buffer.read())
 
-    def test_write_and_read_order(self):
-        self.assertTrue(self.buffer.write(101, 250.50, 10))
+    def test_write_and_read_buy_order(self):
+        self.assertTrue(
+            self.buffer.write(101, "BUY", 250.50, 10)
+        )
         self.assertEqual(
             self.buffer.read(),
-            (101, 250.50, 10)
+            (101, "BUY", 250.50, 10)
+        )
+
+    def test_write_and_read_sell_order(self):
+        self.assertTrue(
+            self.buffer.write(102, "SELL", 251.00, 5)
+        )
+        self.assertEqual(
+            self.buffer.read(),
+            (102, "SELL", 251.00, 5)
         )
 
     def test_full_buffer_rejects_order(self):
-        self.buffer.write(101, 250.50, 10)
-        self.buffer.write(102, 251.00, 5)
-        self.buffer.write(103, 249.75, 8)
+        self.buffer.write(101, "BUY", 250.50, 10)
+        self.buffer.write(102, "SELL", 251.00, 5)
+        self.buffer.write(103, "BUY", 249.75, 8)
 
         self.assertFalse(
-            self.buffer.write(104, 252.00, 2)
+            self.buffer.write(104, "SELL", 252.00, 2)
         )
 
     def test_wrap_around(self):
-        self.buffer.write(101, 250.50, 10)
-        self.buffer.write(102, 251.00, 5)
-        self.buffer.write(103, 249.75, 8)
+        self.buffer.write(101, "BUY", 250.50, 10)
+        self.buffer.write(102, "SELL", 251.00, 5)
+        self.buffer.write(103, "BUY", 249.75, 8)
 
         self.buffer.read()
         self.buffer.read()
 
         self.assertTrue(
-            self.buffer.write(104, 252.00, 2)
+            self.buffer.write(104, "SELL", 252.00, 2)
         )
         self.assertTrue(
-            self.buffer.write(105, 253.00, 4)
+            self.buffer.write(105, "BUY", 253.00, 4)
         )
 
         self.assertEqual(
-            self.buffer.read(), (103, 249.75, 8)
+            self.buffer.read(), (103, "BUY", 249.75, 8)
         )
         self.assertEqual(
-            self.buffer.read(), (104, 252.00, 2)
+            self.buffer.read(), (104, "SELL", 252.00, 2)
         )
         self.assertEqual(
-            self.buffer.read(), (105, 253.00, 4)
+            self.buffer.read(), (105, "BUY", 253.00, 4)
         )
 
     def test_invalid_capacity_is_rejected(self):
@@ -62,7 +72,7 @@ class TestRingBuffer(unittest.TestCase):
                     RingBuffer(capacity)
 
     def test_size_of_empty_buffer(self):
-            self.assertEqual(self.buffer.size(), 0)
+        self.assertEqual(self.buffer.size(), 0)
 
     def test_available_space_initially(self):
         self.assertEqual(self.buffer.available_space(), 3)
@@ -71,15 +81,15 @@ class TestRingBuffer(unittest.TestCase):
         self.assertTrue(self.buffer.is_empty())
         self.assertFalse(self.buffer.is_full())
 
-        self.buffer.write(101, 250.50, 10)
-        self.buffer.write(102, 251.00, 5)
-        self.buffer.write(103, 249.75, 8)
+        self.buffer.write(101, "BUY", 250.50, 10)
+        self.buffer.write(102, "SELL", 251.00, 5)
+        self.buffer.write(103, "BUY", 249.75, 8)
 
         self.assertTrue(self.buffer.is_full())
         self.assertFalse(self.buffer.is_empty())
 
     def test_size_and_available_space_after_write(self):
-        self.buffer.write(101, 250.50, 10)
+        self.buffer.write(101, "BUY", 250.50, 10)
 
         self.assertEqual(self.buffer.size(), 1)
         self.assertEqual(self.buffer.available_space(), 2)
@@ -89,29 +99,34 @@ class TestRingBuffer(unittest.TestCase):
         self.assertEqual(self.buffer.size(), 0)
         self.assertEqual(self.buffer.available_space(), 3)
 
-    
     def test_negative_order_id_is_rejected(self):
         with self.assertRaises(ValueError):
-            self.buffer.write(-1, 250.50, 10)
+            self.buffer.write(-1, "BUY", 250.50, 10)
 
     def test_invalid_price_is_rejected(self):
-        for price in (0, -10, "invalid", True):
+        for price in (0, -10, "invalid", True, float("inf"), float("nan")):
             with self.subTest(price=price):
                 with self.assertRaises(ValueError):
-                    self.buffer.write(101, price, 10)
+                    self.buffer.write(101, "BUY", price, 10)
 
     def test_invalid_quantity_is_rejected(self):
         for quantity in (0, -2, 1.5, True):
             with self.subTest(quantity=quantity):
                 with self.assertRaises(ValueError):
-                    self.buffer.write(101, 250.50, quantity)
+                    self.buffer.write(101, "BUY", 250.50, quantity)
 
     def test_invalid_order_id_type_is_rejected(self):
         for order_id in (1.5, "101", True):
             with self.subTest(order_id=order_id):
                 with self.assertRaises(ValueError):
-                    self.buffer.write(order_id, 250.50, 10)
+                    self.buffer.write(order_id, "BUY", 250.50, 10)
+
+    def test_invalid_side_is_rejected(self):
+        for side in ("HOLD", "", 123):
+            with self.subTest(side=side):
+                with self.assertRaises(ValueError):
+                    self.buffer.write(101, side, 250.50, 10)
+
 
 if __name__ == "__main__":
     unittest.main()
-

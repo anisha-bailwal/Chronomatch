@@ -4,11 +4,13 @@ import random
 import time
 
 from src.ipc.ring_buffer import RingBuffer
+from src.matching_engine import MatchingEngine
 
 
 async def main():
     total_orders = 100
     buffer = RingBuffer(capacity=total_orders)
+    engine =MatchingEngine()
 
     start = time.perf_counter()
 
@@ -17,8 +19,9 @@ async def main():
         for order_id in range(1, total_orders + 1):
             price = round(random.uniform(100, 500), 2)
             quantity = random.randint(1, 100)
+            side = "BUY" if random.random() < 0.5 else "SELL"
 
-            accepted = buffer.write(order_id, price, quantity)
+            accepted = buffer.write(order_id,side, price, quantity)
 
             if not accepted:
                 print("Buffer full!")
@@ -29,24 +32,38 @@ async def main():
 
         # Buffer se orders read karna
         received = 0
+        total_trades = 0
 
         while True:
-            order = buffer.read()
+          order = buffer.read()
 
-            if order is None:
-                break
+          if order is None:
+             break
 
-            received += 1
+          order_id, side, price, quantity = order
+
+          trades = engine.add_order(
+           order_id, side, price, quantity
+         )
+
+          received += 1
+          total_trades += len(trades)
 
         elapsed = time.perf_counter() - start
 
         print("Orders generated:", total_orders)
         print("Orders read:", received)
+        print("Trades executed:", total_trades)
         print("Time taken:", round(elapsed, 6), "seconds")
 
         if elapsed > 0:
             print("Orders per second:", int(received / elapsed))
+     
+        print("\nFinal Order Book:")
+        engine.display_order_book()
 
+        print("\nTrade History:")
+        engine.display_trade_history()
     finally:
         buffer.close()
 

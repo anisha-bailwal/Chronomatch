@@ -1,7 +1,7 @@
-
-
+import math
 import mmap
 import struct
+from src.order_format import ORDER_FORMAT, encode_order, decode_order
 
 
 class RingBuffer:
@@ -16,7 +16,7 @@ class RingBuffer:
                 "Capacity must be a positive integer"
             )
 
-        self.order_format = struct.Struct("=IdI")
+        self.order_format = ORDER_FORMAT
         self.capacity = capacity
 
         # Fixed memory for all buffer slots
@@ -28,43 +28,74 @@ class RingBuffer:
         self.read_pos = 0
         self.count = 0
 
-    def write(self, order_id, price, quantity):
-        # Reject order if buffer is full
-        if self.count == self.capacity:
-            return False
+     
+  
+    def write(self, order_id, side, price, quantity):
+    # Validate order ID
+      if (
+        not isinstance(order_id, int)
+        or isinstance(order_id, bool)
+        or order_id < 0
+      ):
+        raise ValueError("Order ID must be a non-negative integer")
 
-        data = self.order_format.pack(
-            order_id, price, quantity
-        )
+    # Validate side and encode order
+      if not isinstance(side, str) or side.upper() not in ("BUY", "SELL"):
+        raise ValueError("Side must be BUY or SELL")
 
-        position = self.write_pos * self.order_format.size
-        self.memory.seek(position)
-        self.memory.write(data)
+      side = side.upper()
 
-        self.write_pos = (
-            self.write_pos + 1
-        ) % self.capacity
+    # Validate price
+      if (
+        isinstance(price, bool)
+        or not isinstance(price, (int, float))
+        or not math.isfinite(price)
+        or price <= 0
+    ):
+        raise ValueError("Price must be a finite positive number")
 
-        self.count += 1
-        return True
+    # Validate quantity
+      if (
+        not isinstance(quantity, int)
+        or isinstance(quantity, bool)
+        or quantity <= 0
+    ):
+        raise ValueError("Quantity must be a positive integer")
 
+    # Reject order if buffer is full
+      if self.count == self.capacity:
+        return False
+
+      data = encode_order(order_id, side, price, quantity)
+
+      position = self.write_pos * self.order_format.size
+      self.memory.seek(position)
+      self.memory.write(data)
+
+      self.write_pos = (self.write_pos + 1) % self.capacity
+      self.count += 1
+
+      return True
+
+   
+
+    
     def read(self):
-        # Return None if buffer is empty
-        if self.count == 0:
-            return None
+    # Return None if buffer is empty
+      if self.count == 0:
+        return None
 
-        position = self.read_pos * self.order_format.size
-        self.memory.seek(position)
-        data = self.memory.read(self.order_format.size)
+      position = self.read_pos * self.order_format.size
+      self.memory.seek(position)
+      data = self.memory.read(self.order_format.size)
 
-        order = self.order_format.unpack(data)
+      order = decode_order(data)
 
-        self.read_pos = (
-            self.read_pos + 1
-        ) % self.capacity
+      self.read_pos = (self.read_pos + 1) % self.capacity
+      self.count -= 1
 
-        self.count -= 1
-        return order
+      return order
+
 
     def size(self):
         """Return the number of orders currently stored."""
