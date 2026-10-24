@@ -61,3 +61,47 @@ class TestMatchingEngine(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+def test_duplicate_order_id_is_rejected(self):
+    self.engine.add_order(1, "BUY", 99, 5)
+
+    with self.assertRaisesRegex(
+        ValueError, "Order ID already exists"
+    ):
+        self.engine.add_order(1, "SELL", 100, 3)
+def test_non_string_side_is_rejected(self):
+    with self.assertRaisesRegex(
+        ValueError, "Side must be BUY or SELL"
+    ):
+        self.engine.add_order(1, 123, 100, 5)  
+
+def test_non_string_side_is_rejected(self):
+        with self.assertRaises(ValueError):
+            self.engine.add_order(1, 123, 100, 5)
+
+def test_non_positive_price_is_rejected(self):
+        with self.assertRaises(ValueError):
+            self.engine.add_order(1, "BUY", 0, 5)
+
+def test_non_integer_quantity_is_rejected(self):
+        with self.assertRaises(ValueError):
+            self.engine.add_order(1, "BUY", 100, 2.5)
+
+def test_duplicate_order_id_is_rejected(self):
+        self.engine.add_order(1, "BUY", 99, 5)
+
+        with self.assertRaisesRegex(
+            ValueError, "Order ID already exists"
+        ):
+            self.engine.add_order(1, "SELL", 100, 3)
+
+def test_trade_history_records_executed_trades(self):
+        self.engine.add_order(1, "SELL", 100, 5)
+        self.engine.add_order(2, "BUY", 100, 3)
+
+        self.assertEqual(len(self.engine.trade_history), 1)
+        self.assertEqual(
+            self.engine.trade_history[0].quantity, 3
+        )
+        self.assertEqual(
+            self.engine.trade_history[0].sell_order_id, 1
+        )
