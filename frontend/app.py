@@ -175,6 +175,53 @@ if page == "Order Book":
             st.info("No active sell orders.")
 
     st.stop()
+if page == "Trade History":
+    st.title("🧾 Trade History")
+    st.caption("Record of executed trades")
+
+    if engine.trade_history:
+        st.dataframe(
+            [
+                {
+                    "Buy Order": trade.buy_order_id,
+                    "Sell Order": trade.sell_order_id,
+                    "Price": trade.price,
+                    "Quantity": trade.quantity,
+                }
+                for trade in reversed(engine.trade_history)
+            ],
+            use_container_width=True,
+            hide_index=True,
+        )
+    else:
+        st.info("No trades executed yet.")
+
+    st.stop()
+
+
+if page == "Performance":
+    st.title("⚡ Performance")
+    st.caption("Order processing measurements")
+
+    latencies = [
+        item["Latency (ms)"]
+        for item in st.session_state.get("latency_history", [])
+    ]
+
+    if latencies:
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Measured Orders", len(latencies))
+        col2.metric(
+            "Average Processing Time",
+            f"{sum(latencies) / len(latencies):.4f} ms",
+        )
+        col3.metric("Maximum Processing Time", f"{max(latencies):.4f} ms")
+
+        st.line_chart(latencies)
+    else:
+        st.info("Place orders on the Dashboard to collect measurements.")
+
+    st.stop()    
 
 # Header
 st.title("📈 ChronosMatch")
