@@ -1,7 +1,15 @@
 import math
 from dataclasses import dataclass, field
 
-
+cdef inline bint price_crosses(
+    double incoming_price,
+    double resting_price,
+    bint is_buy
+):
+    if is_buy:
+        return incoming_price >= resting_price
+    else:
+        return incoming_price <= resting_price
 @dataclass
 class Order:
     order_id: int
@@ -77,11 +85,11 @@ class MatchingEngine:
             # Best sell = lowest price; best buy = highest price
             best = book[0]
 
-            crosses = (
-                incoming.price >= best.price
-                if side == "BUY"
-                else incoming.price <= best.price
-            )
+            crosses = price_crosses(
+                  incoming.price,
+                    best.price,
+                   side == "BUY"
+                   )
 
             if not crosses:
                 break
