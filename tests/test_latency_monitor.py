@@ -19,7 +19,31 @@ class TestLatencyMonitor(unittest.TestCase):
         self.assertEqual(result, "Completed")
         self.assertGreater(latency, 0)
 
+    def test_latency_is_stored(self):
+        self.monitor.measure_latency(lambda: "Done")
+
+        self.assertEqual(len(self.monitor.latencies), 1)
+
+    def test_average_latency(self):
+        self.monitor.latencies = [10, 20, 30]
+
+        self.assertEqual(self.monitor.get_average_latency(), 20)
+
+    def test_min_latency(self):
+        self.monitor.latencies = [10, 20, 30]
+
+        self.assertEqual(self.monitor.get_min_latency(), 10)
+
+    def test_max_latency(self):
+        self.monitor.latencies = [10, 20, 30]
+
+        self.assertEqual(self.monitor.get_max_latency(), 30)
+
+    def test_empty_latency_metrics(self):
+        self.assertEqual(self.monitor.get_average_latency(), 0)
+        self.assertEqual(self.monitor.get_min_latency(), 0)
+        self.assertEqual(self.monitor.get_max_latency(), 0)
+
 
 if __name__ == "__main__":
     unittest.main()
-    

@@ -3,6 +3,9 @@ import time
 
 class LatencyMonitor:
 
+    def __init__(self):
+        self.latencies = []
+
     def measure_latency(self, function, *args, **kwargs):
         start_time = time.perf_counter()
 
@@ -11,5 +14,24 @@ class LatencyMonitor:
         end_time = time.perf_counter()
 
         latency = (end_time - start_time) * 1000
+        self.latencies.append(latency)
 
         return result, latency
+
+    def get_average_latency(self):
+        if not self.latencies:
+            return 0
+
+        return sum(self.latencies) / len(self.latencies)
+
+    def get_min_latency(self):
+        if not self.latencies:
+            return 0
+
+        return min(self.latencies)
+
+    def get_max_latency(self):
+        if not self.latencies:
+            return 0
+
+        return max(self.latencies)
