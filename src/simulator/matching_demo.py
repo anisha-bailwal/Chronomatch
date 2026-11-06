@@ -33,6 +33,7 @@ print("\nLatency Statistics:")
 print(f"Average Latency: {monitor.get_average_latency():.4f} ms")
 print(f"Minimum Latency: {monitor.get_min_latency():.4f} ms")
 print(f"Maximum Latency: {monitor.get_max_latency():.4f} ms")
+print(f"Total Orders Processed: {monitor.get_total_orders()}")
 
 # Display completed trades
 print("\nCompleted Trades:")

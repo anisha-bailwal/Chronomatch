@@ -44,6 +44,11 @@ class TestLatencyMonitor(unittest.TestCase):
         self.assertEqual(self.monitor.get_min_latency(), 0)
         self.assertEqual(self.monitor.get_max_latency(), 0)
 
+        def test_total_orders(self):
+            self.monitor.measure_latency(lambda: "Done")
+            self.monitor.measure_latency(lambda: "Done")
+
+            self.assertEqual(self.monitor.get_total_orders(), 2)
 
 if __name__ == "__main__":
     unittest.main()
