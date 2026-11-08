@@ -3,19 +3,17 @@ import time
 import sys
 from pathlib import Path
 
+import altair as alt
 import streamlit as st
 
-# Project root
+# PROJECT ROOT
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from src.matching_engine import MatchingEngine
 
 
-# --------------------------------------------------
 # PAGE CONFIGURATION
-# --------------------------------------------------
-
 st.set_page_config(
     page_title="ChronosMatch | Trading Terminal",
     page_icon="📈",
@@ -24,13 +22,9 @@ st.set_page_config(
 )
 
 
-# --------------------------------------------------
 # CUSTOM DESIGN
-# --------------------------------------------------
-
 st.markdown("""
 <style>
-
 .stApp {
     background: #080e18;
     color: #e6edf3;
@@ -78,6 +72,7 @@ p {
 [data-testid="stDataFrame"] {
     border: 1px solid #26384e;
     border-radius: 10px;
+    overflow: hidden;
 }
 
 [data-testid="stForm"] {
@@ -101,7 +96,6 @@ p {
 .stFormSubmitButton button:hover {
     background: #00c18a;
     color: white;
-    border: none;
 }
 
 div[data-baseweb="input"] {
@@ -111,15 +105,31 @@ div[data-baseweb="input"] {
 hr {
     border-color: #26384e;
 }
+[data-testid="stTable"] {
+    background-color: #111e2d !important;
+    color: #e6edf3 !important;
+}
 
+[data-testid="stTable"] table {
+    background-color: #111e2d !important;
+    color: #e6edf3 !important;
+    width: 100%;
+}
+
+[data-testid="stTable"] th {
+    background-color: #17283b !important;
+    color: #00d69a !important;
+}
+
+[data-testid="stTable"] td {
+    background-color: #111e2d !important;
+    color: #e6edf3 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
 
-# --------------------------------------------------
 # SESSION STATE
-# --------------------------------------------------
-
 if "engine" not in st.session_state:
     st.session_state.engine = MatchingEngine()
 
@@ -129,18 +139,19 @@ if "next_order_id" not in st.session_state:
 if "latency_history" not in st.session_state:
     st.session_state.latency_history = []
 
+if "last_latency_ms" not in st.session_state:
+    st.session_state.last_latency_ms = None
+
 engine = st.session_state.engine
 
 
-# --------------------------------------------------
 # HELPER FUNCTIONS
-# --------------------------------------------------
 
 def get_order_data(orders):
     return [
         {
             "Order ID": order.order_id,
-            "Price": order.price,
+            "Price": f"{order.price:.2f}",
             "Quantity": order.quantity,
         }
         for order in orders
@@ -152,16 +163,81 @@ def get_trade_data():
         {
             "Buy Order": trade.buy_order_id,
             "Sell Order": trade.sell_order_id,
-            "Price": trade.price,
+            "Price": f"{trade.price:.2f}",
             "Quantity": trade.quantity,
         }
         for trade in reversed(engine.trade_history)
     ]
 
+def show_table(data):
+    if data:
+        st.table(
+            data
+         
+        )
+    else:
+        st.info("No data available yet.")
 
-# --------------------------------------------------
+# DARK CHART FUNCTION
+
+def show_dark_chart(values, label):
+
+    chart_data = [
+        {"Order": index + 1, "Value": value}
+        for index, value in enumerate(values)
+    ]
+
+    chart = (
+        alt.Chart(alt.Data(values=chart_data))
+        .mark_line(
+            color="#00d69a",
+            strokeWidth=3,
+            point=True,
+        )
+        .encode(
+            x=alt.X(
+                "Order:Q",
+                title="Order Number",
+                axis=alt.Axis(
+                    labelColor="#a7b5c8",
+                    titleColor="#a7b5c8",
+                    gridColor="#26384e",
+                ),
+            ),
+            y=alt.Y(
+                "Value:Q",
+                title=label,
+                scale=alt.Scale(zero=False),
+                axis=alt.Axis(
+                    labelColor="#a7b5c8",
+                    titleColor="#a7b5c8",
+                    gridColor="#26384e",
+                ),
+            ),
+            tooltip=["Order:Q", "Value:Q"],
+        )
+        .properties(
+            height=300,
+            background="#080e18",
+        )
+        .configure_view(
+            fill="#080e18",
+            stroke="#26384e",
+        )
+        .configure_axis(
+            labelFontSize=12,
+            titleFontSize=13,
+        )
+    )
+
+    st.altair_chart(
+        chart,
+        use_container_width=True,
+        theme=None,
+    )
+
+
 # SIDEBAR
-# --------------------------------------------------
 
 with st.sidebar:
 
@@ -215,9 +291,7 @@ with st.sidebar:
     st.caption("Development Build")
 
 
-# --------------------------------------------------
 # COMMON HEADER
-# --------------------------------------------------
 
 st.markdown("""
 <div style="
@@ -240,19 +314,12 @@ st.markdown("""
             <p style="margin:0;">
                 Fast. Reliable. Intelligent Trading.
             </p>
-        </div>
-
-        <span style="font-size:55px; padding-right:15px;">
-            📈
-        </span>
-    </div>
+    
 </div>
 """, unsafe_allow_html=True)
 
 
-# --------------------------------------------------
 # DASHBOARD
-# --------------------------------------------------
 
 if page == "Dashboard":
 
@@ -287,8 +354,6 @@ if page == "Dashboard":
 
     st.divider()
 
-    # Chart and quick market information
-
     left, right = st.columns([2, 1])
 
     with left:
@@ -303,10 +368,7 @@ if page == "Dashboard":
                 for trade in engine.trade_history
             ]
 
-            st.line_chart(
-                prices,
-                height=300,
-            )
+            show_dark_chart(prices, "Execution Price")
 
         else:
             st.info(
@@ -333,7 +395,7 @@ if page == "Dashboard":
             len(engine.trade_history),
         )
 
-        last_latency = st.session_state.get("last_latency_ms")
+        last_latency = st.session_state.last_latency_ms
 
         st.metric(
             "Last Order Latency",
@@ -343,8 +405,7 @@ if page == "Dashboard":
 
     st.divider()
 
-    # Order book preview
-
+    # MARKET DEPTH
     st.subheader("📚 Market Depth")
 
     buy_col, sell_col = st.columns(2)
@@ -353,53 +414,33 @@ if page == "Dashboard":
 
         st.markdown("🟢 **BUY ORDERS**")
 
-        if engine.buy_orders:
-
-            st.dataframe(
-                get_order_data(engine.buy_orders),
-                use_container_width=True,
-                hide_index=True,
-            )
-
-        else:
-            st.info("No active buy orders.")
+        buy_data = get_order_data(engine.buy_orders)
+        show_table(buy_data)
 
     with sell_col:
 
         st.markdown("🔴 **SELL ORDERS**")
 
-        if engine.sell_orders:
-
-            st.dataframe(
-                get_order_data(engine.sell_orders),
-                use_container_width=True,
-                hide_index=True,
-            )
-
-        else:
-            st.info("No active sell orders.")
+        sell_data = get_order_data(engine.sell_orders)
+        show_table(sell_data)
 
     st.divider()
 
-    # Recent trades
-
+    # RECENT TRADES
     st.subheader("🧾 Recent Trades")
 
-    if engine.trade_history:
+    recent_trades = get_trade_data()[:5]
 
-        st.dataframe(
-            get_trade_data()[:5],
-            use_container_width=True,
-            hide_index=True,
+    if recent_trades:
+        show_table(recent_trades)
+    else:
+        st.info(
+            "No trades executed yet. "
+            "A trade appears here when a BUY and SELL order match."
         )
 
-    else:
-        st.info("No trades executed yet.")
 
-
-# --------------------------------------------------
 # PLACE ORDER
-# --------------------------------------------------
 
 elif page == "Place Order":
 
@@ -459,7 +500,6 @@ elif page == "Place Order":
                     ) * 1000
 
                     st.session_state.next_order_id += 1
-
                     st.session_state.last_latency_ms = latency_ms
 
                     st.session_state.latency_history.append({
@@ -476,7 +516,6 @@ elif page == "Place Order":
                     )
 
                 except ValueError as error:
-
                     st.error(str(error))
 
     with right:
@@ -504,22 +543,21 @@ elif page == "Place Order":
 
         st.markdown("### Current Market")
 
+        best_bid = engine.get_best_bid()
+        best_ask = engine.get_best_ask()
+
         st.metric(
             "Best Bid",
-            f"{engine.get_best_bid():.2f}"
-            if engine.get_best_bid() is not None else "—",
+            f"{best_bid:.2f}" if best_bid is not None else "—",
         )
 
         st.metric(
             "Best Ask",
-            f"{engine.get_best_ask():.2f}"
-            if engine.get_best_ask() is not None else "—",
+            f"{best_ask:.2f}" if best_ask is not None else "—",
         )
 
 
-# --------------------------------------------------
 # ORDER BOOK
-# --------------------------------------------------
 
 elif page == "Order Book":
 
@@ -531,32 +569,12 @@ elif page == "Order Book":
     with buy_col:
 
         st.markdown("### 🟢 BUY SIDE")
-
-        if engine.buy_orders:
-
-            st.dataframe(
-                get_order_data(engine.buy_orders),
-                use_container_width=True,
-                hide_index=True,
-            )
-
-        else:
-            st.info("No active buy orders.")
+        show_table(get_order_data(engine.buy_orders))
 
     with sell_col:
 
         st.markdown("### 🔴 SELL SIDE")
-
-        if engine.sell_orders:
-
-            st.dataframe(
-                get_order_data(engine.sell_orders),
-                use_container_width=True,
-                hide_index=True,
-            )
-
-        else:
-            st.info("No active sell orders.")
+        show_table(get_order_data(engine.sell_orders))
 
     st.divider()
 
@@ -569,22 +587,18 @@ elif page == "Order Book":
     col3.metric("Total Trades", len(engine.trade_history))
 
 
-# --------------------------------------------------
 # TRADE HISTORY
-# --------------------------------------------------
 
 elif page == "Trade History":
 
     st.subheader("🧾 Trade History")
     st.caption("A record of all successfully executed trades")
 
-    if engine.trade_history:
+    trade_data = get_trade_data()
 
-        st.dataframe(
-            get_trade_data(),
-            use_container_width=True,
-            hide_index=True,
-        )
+    if trade_data:
+
+        show_table(trade_data)
 
         prices = [
             trade.price
@@ -595,10 +609,7 @@ elif page == "Trade History":
 
         st.subheader("Trade Price Movement")
 
-        st.line_chart(
-            prices,
-            height=300,
-        )
+        show_dark_chart(prices, "Trade Price")
 
     else:
 
@@ -608,9 +619,7 @@ elif page == "Trade History":
         )
 
 
-# --------------------------------------------------
 # ANALYTICS
-# --------------------------------------------------
 
 elif page == "Analytics":
 
@@ -626,11 +635,7 @@ elif page == "Analytics":
 
         col1, col2, col3, col4 = st.columns(4)
 
-        col1.metric(
-            "Measured Orders",
-            len(latencies),
-        )
-
+        col1.metric("Measured Orders", len(latencies))
         col2.metric(
             "Average Latency",
             f"{sum(latencies) / len(latencies):.4f} ms",
@@ -650,10 +655,7 @@ elif page == "Analytics":
 
         st.subheader("Latency History")
 
-        st.line_chart(
-            latencies,
-            height=300,
-        )
+        show_dark_chart(latencies, "Latency (ms)")
 
     else:
 
@@ -663,9 +665,7 @@ elif page == "Analytics":
         )
 
 
-# --------------------------------------------------
 # FOOTER
-# --------------------------------------------------
 
 st.divider()
 
