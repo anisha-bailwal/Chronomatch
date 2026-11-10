@@ -172,7 +172,7 @@ def get_trade_data():
 
 def generate_100_orders():
     
-    for _ in range(100):
+    for _ in range(1000):
 
         order_id = st.session_state.next_order_id
         side = random.choice(["BUY", "SELL"])
@@ -356,9 +356,9 @@ if page == "Dashboard":
 
     st.subheader("Market Overview")
     st.caption("Your trading activity at a glance")
-    if st.button("🚀 Generate 100 Orders", use_container_width=True):
+    if st.button("🚀 Generate 1000 Orders", use_container_width=True):
            generate_100_orders()
-           st.success("100 orders generated successfully!")
+           st.success("1000 orders generated successfully!")
            st.rerun()
 
     best_bid = engine.get_best_bid()
