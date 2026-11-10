@@ -1,6 +1,7 @@
 
 import time
 import sys
+import random
 from pathlib import Path
 
 import altair as alt
@@ -169,6 +170,36 @@ def get_trade_data():
         for trade in reversed(engine.trade_history)
     ]
 
+def generate_100_orders():
+    
+    for _ in range(100):
+
+        order_id = st.session_state.next_order_id
+        side = random.choice(["BUY", "SELL"])
+        price = round(random.uniform(90, 110), 2)
+        quantity = random.randint(1, 10)
+
+        start_time = time.perf_counter()
+
+        engine.add_order(
+            order_id,
+            side,
+            price,
+            quantity
+        )
+
+        latency_ms = (
+            time.perf_counter() - start_time
+        ) * 1000
+
+        st.session_state.latency_history.append({
+            "Order": order_id,
+            "Latency (ms)": latency_ms
+        })
+
+        st.session_state.last_latency_ms = latency_ms
+        st.session_state.next_order_id += 1
+
 def show_table(data):
     if data:
         st.table(
@@ -325,6 +356,10 @@ if page == "Dashboard":
 
     st.subheader("Market Overview")
     st.caption("Your trading activity at a glance")
+    if st.button("🚀 Generate 100 Orders", use_container_width=True):
+           generate_100_orders()
+           st.success("100 orders generated successfully!")
+           st.rerun()
 
     best_bid = engine.get_best_bid()
     best_ask = engine.get_best_ask()
